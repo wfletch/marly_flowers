@@ -1,3 +1,3 @@
 # Flowers For Marle
 
-## Silly Little website for a silly little human
+## Silly Little gift for a silly little human
