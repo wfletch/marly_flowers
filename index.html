@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="valentine">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flowers For Marle</title>
+
+  <!-- Tailwind (browser build) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <!-- DaisyUI core -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/daisyui@5"
+    rel="stylesheet"
+    type="text/css"
+  />
+
+  <!-- DaisyUI themes -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css"
+    rel="stylesheet"
+    type="text/css"
+  />
+
+  <style>
+    /* Ensure canvas is crisp and fills width */
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-base-100 text-base-content">
+
+  <!-- HEADER -->
+  <header class="h-10 px-4 flex items-center justify-center border-b border-base-300">
+    <div class="flex items-center gap-2 opacity-80">
+      <!-- DaisyUI SVG Logo -->
+      <svg
+        width="28"
+        height="28"
+        viewBox="0 0 415 415"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect width="415" height="415" rx="72" fill="currentColor"/>
+        <path
+          d="M128 304C128 315.046 136.954 324 148 324H266C277.046 324 286 315.046 286 304V111C286 99.9543 277.046 91 266 91H148C136.954 91 128 99.9543 128 111V304Z"
+          fill="white"
+        />
+      </svg>
+      <span class="text-sm font-semibold">Canvas Demo</span>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="flex-1 flex items-center justify-center">
+    <div class="w-full">
+      <canvas
+        id="mainCanvas"
+        class="w-full h-[60vh] bg-base-200"
+      ></canvas>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+<footer class="h-8 px-4 flex items-center justify-center border-t border-base-300 text-xs opacity-70">
+  <span>
+    made with <span class="text-error">❤</span> for Marle Visagie
+  </span>
+</footer>
+
+  <!-- Canvas setup -->
+
+  <script>
+
+(() => {
+  const canvas = document.getElementById("mainCanvas");
+  const ctx = canvas.getContext("2d");
+
+  /* =======================
+     DPI-safe resize
+  ======================= */
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+
+  /* =======================
+     Lightweight Perlin-ish noise
+  ======================= */
+  const smoothstep = t => t * t * (3 - 2 * t);
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const rand = n => (Math.sin(n * 127.1) * 43758.5453) % 1;
+
+  function noise1D(x) {
+    const x0 = Math.floor(x);
+    const x1 = x0 + 1;
+    const t = smoothstep(x - x0);
+    return lerp(rand(x0), rand(x1), t);
+  }
+
+  /* =======================
+     Mouse wind
+  ======================= */
+  const mouse = { x: 0, y: 0, active: false };
+
+  canvas.addEventListener("mousemove", e => {
+    const r = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - r.left;
+    mouse.y = e.clientY - r.top;
+    mouse.active = true;
+  });
+
+  canvas.addEventListener("mouseleave", () => {
+    mouse.active = false;
+  });
+
+  /* =======================
+     Flowers
+  ======================= */
+  const flowers = [];
+  const FLOWER_COUNT = 45;
+
+  function createFlowers() {
+    flowers.length = 0;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+
+    for (let i = 0; i < FLOWER_COUNT; i++) {
+      flowers.push({
+        x: Math.random() * w,
+        y: h - 20,
+        height: 80 + Math.random() * 70,
+        noiseOffset: Math.random() * 1000,
+        flexibility: 0.5 + Math.random() * 0.7,
+        petalCount: 5 + Math.floor(Math.random() * 4),
+        petalSize: 5 + Math.random() * 4,
+        color: `hsl(${Math.random() * 360}, 70%, 65%)`,
+        leafSide: Math.random() > 0.5 ? 1 : -1
+      });
+    }
+  }
+
+  createFlowers();
+  window.addEventListener("resize", createFlowers);
+
+  /* =======================
+     Drawing helpers
+  ======================= */
+  function drawLeaf(x, y, angle, size) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.fillStyle = "#4caf50";
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(size, -size * 0.6, size * 2, 0);
+    ctx.quadraticCurveTo(size, size * 0.6, 0, 0);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawFlowerHead(x, y, petals, size, color, wobble) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    for (let i = 0; i < petals; i++) {
+      const angle = (Math.PI * 2 / petals) * i + wobble;
+      ctx.save();
+      ctx.rotate(angle);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.ellipse(0, -size, size * 0.6, size * 1.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.fillStyle = "#ffd166";
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  /* =======================
+     Main flower draw
+  ======================= */
+  function drawFlower(flower, time) {
+    const t = time * 0.00025;
+
+    // Global wind (noise)
+    const noiseWind =
+      (noise1D(t + flower.noiseOffset) - 0.5) * 35;
+
+    // Mouse wind
+    let mouseWind = 0;
+    if (mouse.active) {
+      const dx = flower.x - mouse.x;
+      const dy = flower.y - mouse.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const influence = Math.max(0, 1 - dist / 220);
+      mouseWind = influence * -dx * 0.06;
+    }
+
+    const wind = (noiseWind + mouseWind) * flower.flexibility;
+
+    const baseX = flower.x;
+    const baseY = flower.y;
+    const topX = baseX + wind;
+    const topY = baseY - flower.height;
+
+    // Stem
+    ctx.strokeStyle = "#2f6f3e";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(baseX, baseY);
+    ctx.quadraticCurveTo(
+      baseX + wind * 0.4,
+      baseY - flower.height * 0.55,
+      topX,
+      topY
+    );
+    ctx.stroke();
+
+    // Leaf
+    drawLeaf(
+      baseX + wind * 0.2,
+      baseY - flower.height * 0.45,
+      wind * 0.01 * flower.leafSide,
+      12
+    );
+
+    // Flower head
+    drawFlowerHead(
+      topX,
+      topY,
+      flower.petalCount,
+      flower.petalSize,
+      flower.color,
+      wind * 0.02
+    );
+  }
+
+  /* =======================
+     Animation loop
+  ======================= */
+  function animate(time) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Sky
+    ctx.fillStyle = "#fde2e4";
+    ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+
+    // Ground
+    ctx.fillStyle = "#c7f9cc";
+    ctx.fillRect(
+      0,
+      canvas.clientHeight - 40,
+      canvas.clientWidth,
+      40
+    );
+
+    for (const flower of flowers) {
+      drawFlower(flower, time);
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  requestAnimationFrame(animate);
+})();
+      </script>
+</body>
+</html>
